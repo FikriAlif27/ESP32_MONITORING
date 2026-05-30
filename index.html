@@ -807,9 +807,90 @@ document.querySelectorAll('.motor-btn[data-action]').forEach(btn => {
   });
 });
 
+// ══════════════════════════════════════════════════════
+//  AUTO-SAVE ke localStorage
+// ══════════════════════════════════════════════════════
+const LS_KEY = 'esp32_motor_cfg_v1';
+
+const STATIC_FIELDS = [
+  'cfg-host', 'cfg-port', 'cfg-user', 'cfg-pass',
+  'cfg-motor-topic', 'cfg-repeat-delay'
+];
+
+function saveToStorage() {
+  const data = {};
+  STATIC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  MOTOR_ACTIONS.forEach(action => {
+    const pinsEl = document.getElementById('cfg-pins-'   + action.id);
+    const repEl  = document.getElementById('cfg-repeat-' + action.id);
+    if (pinsEl) data['cfg-pins-'   + action.id] = pinsEl.value;
+    if (repEl)  data['cfg-repeat-' + action.id] = repEl.value;
+  });
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+  showSavedToast();
+}
+
+function loadFromStorage() {
+  const raw = localStorage.getItem(LS_KEY);
+  if (!raw) return false;
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { return false; }
+  STATIC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && data[id] !== undefined) el.value = data[id];
+  });
+  MOTOR_ACTIONS.forEach(action => {
+    const pinsKey = 'cfg-pins-'   + action.id;
+    const repKey  = 'cfg-repeat-' + action.id;
+    if (data[pinsKey] !== undefined) {
+      action.pins = data[pinsKey].split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    }
+    if (data[repKey] !== undefined) {
+      action.repeat = parseInt(data[repKey]) || 1;
+    }
+  });
+  return true;
+}
+
+let toastTimer = null;
+function showSavedToast() {
+  let toast = document.getElementById('save-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'save-toast';
+    toast.style.cssText = 'position:fixed;bottom:28px;right:24px;background:#0f1318;border:1px solid var(--accent-dim);color:var(--accent);font-family:var(--mono);font-size:11px;letter-spacing:0.1em;padding:10px 18px;border-radius:8px;box-shadow:0 0 16px rgba(57,255,20,0.2);opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:9999;';
+    toast.textContent = '\u2713 TERSIMPAN';
+    document.body.appendChild(toast);
+  }
+  toast.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { toast.style.opacity = '0'; }, 1400);
+}
+
+function attachStaticSaveListeners() {
+  STATIC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', saveToStorage);
+  });
+}
+
+function attachGridSaveListeners() {
+  MOTOR_ACTIONS.forEach(action => {
+    const pinsEl = document.getElementById('cfg-pins-'   + action.id);
+    const repEl  = document.getElementById('cfg-repeat-' + action.id);
+    if (pinsEl) pinsEl.addEventListener('input', saveToStorage);
+    if (repEl)  repEl.addEventListener('input',  saveToStorage);
+  });
+}
 
 // ── Init ──
+loadFromStorage();
 buildConfigGrid();
+attachStaticSaveListeners();
+attachGridSaveListeners();
 setMotorBtnsDisabled(true);
 </script>
 </body>
