@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>REXKETEX PROJEX</title>
+<title>ESP32 LCD Remote Sender + Motor Control</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.3.4/mqtt.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -15,10 +15,8 @@
     --accent-dim:  #1a7a06;
     --amber:       #ffb300;
     --red:         #ff3b3b;
-    --blue:        #00bfff;
-    --blue-dim:    #006a8a;
-    --purple:      #bf5fff;
-    --purple-dim:  #6a2a8a;
+    --blue:        #38bdf8;
+    --purple:      #c084fc;
     --lcd-bg:      #0d1a0a;
     --lcd-pixel:   #39ff14;
     --lcd-dim:     #0f3a08;
@@ -45,10 +43,9 @@
       repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(57,255,20,0.012) 2px, rgba(57,255,20,0.012) 4px);
   }
 
-  /* ── Header ── */
   header {
     width: 100%;
-    max-width: 680px;
+    max-width: 760px;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -77,10 +74,9 @@
   }
   h1 span { display: block; color: var(--text-dim); font-size: 0.65em; letter-spacing: 0.08em; font-weight: 400; margin-top: 2px; }
 
-  /* ── Status bar ── */
   .status-bar {
     width: 100%;
-    max-width: 680px;
+    max-width: 760px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -106,10 +102,9 @@
   #status-text { flex: 1; }
   #broker-host { margin-left: auto; color: var(--text-dim); font-size: 10px; }
 
-  /* ── Card ── */
   .card {
     width: 100%;
-    max-width: 680px;
+    max-width: 760px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -134,21 +129,14 @@
     background: var(--border);
   }
 
-  /* ── LCD Display ── */
-  .lcd-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 10px;
-  }
+  /* ── LCD ── */
+  .lcd-wrapper { display: flex; justify-content: center; margin-bottom: 10px; }
   .lcd-outer {
     background: #1a2414;
     border: 3px solid #2a3a22;
     border-radius: 8px;
     padding: 18px 22px;
-    box-shadow:
-      0 0 0 1px #0d1a0a,
-      0 8px 32px rgba(0,0,0,0.8),
-      inset 0 1px 0 rgba(255,255,255,0.05);
+    box-shadow: 0 0 0 1px #0d1a0a, 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
     position: relative;
   }
   .lcd-screen {
@@ -156,10 +144,7 @@
     border: 2px solid #0a1408;
     border-radius: 3px;
     padding: 12px 10px;
-    box-shadow:
-      inset 0 0 20px rgba(0,0,0,0.6),
-      inset 0 0 4px rgba(57,255,20,0.08),
-      0 0 0 1px #0f1e0a;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6), inset 0 0 4px rgba(57,255,20,0.08), 0 0 0 1px #0f1e0a;
     position: relative;
     overflow: hidden;
   }
@@ -167,9 +152,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
-    );
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
     pointer-events: none;
     z-index: 2;
   }
@@ -182,21 +165,13 @@
     pointer-events: none;
     z-index: 3;
   }
-  .lcd-row {
-    display: flex;
-    gap: 3px;
-    position: relative;
-    z-index: 1;
-  }
+  .lcd-row { display: flex; gap: 3px; position: relative; z-index: 1; }
   .lcd-row + .lcd-row { margin-top: 8px; }
   .lcd-cell {
-    width: 18px;
-    height: 26px;
+    width: 18px; height: 26px;
     background: var(--lcd-off);
     border-radius: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-family: var(--mono);
     font-size: 13px;
     color: var(--lcd-pixel);
@@ -205,26 +180,18 @@
     user-select: none;
   }
   .lcd-cell.empty { color: var(--lcd-dim); background: var(--lcd-off); }
-  .lcd-cell.cursor { background: var(--accent-dim); animation: cursor-blink 1s step-end infinite; }
   .lcd-cell.overflow { background: rgba(255,59,59,0.2); color: var(--red); text-shadow: 0 0 6px var(--red); }
-  @keyframes cursor-blink { 0%,100%{background:var(--accent-dim)} 50%{background:var(--lcd-off)} }
   .lcd-label { display: flex; justify-content: space-between; margin-top: 10px; }
   .lcd-label span { font-size: 9px; letter-spacing: 0.1em; color: var(--text-dim); }
 
-  /* ── Char counter ── */
   .char-counter {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-top: 12px;
-    font-size: 11px;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 6px; margin-top: 12px; font-size: 11px;
   }
   .char-counter .count { font-family: var(--head); font-size: 13px; color: var(--accent); }
   .char-counter .count.warn { color: var(--amber); }
   .char-counter .count.over { color: var(--red); }
 
-  /* ── Message input ── */
   .input-group { margin-bottom: 20px; }
   label {
     display: block;
@@ -252,7 +219,6 @@
     box-shadow: 0 0 0 2px rgba(57,255,20,0.1);
   }
   textarea { height: 72px; }
-
   .row-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 480px) { .row-inputs { grid-template-columns: 1fr; } }
 
@@ -296,13 +262,186 @@
   .btn-connect.disconnect { border-color: var(--red); color: var(--red); }
   .btn-connect.disconnect:hover { background: rgba(255,59,59,0.07); }
 
+  /* ── Motor Config Grid ── */
+  .motor-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .cfg-box {
+    background: #070a07;
+    border: 1px solid #1a2a18;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .cfg-box-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .cfg-box-input {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #1e2a1a !important;
+    border-radius: 0 !important;
+    padding: 4px 0 !important;
+    font-size: 13px !important;
+    color: var(--amber) !important;
+    letter-spacing: 0.06em;
+    margin-bottom: 0 !important;
+    box-shadow: none !important;
+  }
+  .cfg-box-input:focus {
+    border-bottom-color: var(--accent-dim) !important;
+    box-shadow: none !important;
+  }
+  .cfg-box-badge {
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .cfg-repeat-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .cfg-repeat-wrap label {
+    font-size: 8px;
+    color: var(--text-dim);
+    margin: 0;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0.05em;
+  }
+  .cfg-repeat-input {
+    width: 42px !important;
+    text-align: center;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #1e2a1a !important;
+    border-radius: 0 !important;
+    padding: 2px 4px !important;
+    font-size: 12px !important;
+    color: var(--purple) !important;
+    box-shadow: none !important;
+  }
+
+  /* ── Motor Control Buttons ── */
+  .motor-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 340px;
+    margin: 0 auto 20px;
+  }
+  .motor-pad .empty-cell { visibility: hidden; }
+  .motor-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 14px 8px;
+    text-align: center;
+    transition: all 0.12s;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+  }
+  .motor-btn .icon { font-size: 18px; line-height: 1; }
+  .motor-btn .lbl { font-size: 9px; letter-spacing: 0.1em; }
+  .motor-btn.dir {
+    background: rgba(57,255,20,0.08);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(57,255,20,0.1);
+  }
+  .motor-btn.dir:hover { background: rgba(57,255,20,0.18); box-shadow: 0 0 18px rgba(57,255,20,0.25); }
+  .motor-btn.dir:active { transform: scale(0.95); background: rgba(57,255,20,0.28); }
+  .motor-btn.dir:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Zoom buttons row */
+  .zoom-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .motor-btn.zoom {
+    background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.35);
+    color: var(--blue);
+    flex: 1;
+    max-width: 150px;
+  }
+  .motor-btn.zoom:hover { background: rgba(56,189,248,0.18); }
+  .motor-btn.zoom:active { transform: scale(0.95); }
+  .motor-btn.zoom:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Answer buttons */
+  .answer-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 480px) { .answer-row { grid-template-columns: 1fr 1fr; } }
+  .motor-btn.answer {
+    background: rgba(192,132,252,0.08);
+    border: 1px solid rgba(192,132,252,0.35);
+    color: var(--purple);
+  }
+  .motor-btn.answer:hover { background: rgba(192,132,252,0.18); }
+  .motor-btn.answer:active { transform: scale(0.95); }
+  .motor-btn.answer:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* OKE button */
+  .oke-row { display: flex; justify-content: center; }
+  .motor-btn.oke {
+    background: rgba(255,179,0,0.08);
+    border: 1px solid rgba(255,179,0,0.4);
+    color: var(--amber);
+    padding: 14px 40px;
+  }
+  .motor-btn.oke:hover { background: rgba(255,179,0,0.18); }
+  .motor-btn.oke:active { transform: scale(0.95); }
+  .motor-btn.oke:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .motor-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+  .section-sub {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  /* feedback flash on motor btn */
+  @keyframes motor-flash { 0%{opacity:1} 40%{opacity:0.5} 100%{opacity:1} }
+  .motor-btn.firing { animation: motor-flash 0.2s ease; }
+
   /* ── Log ── */
   .log-box {
     background: #070a07;
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 12px 14px;
-    height: 120px;
+    height: 140px;
     overflow-y: auto;
     font-size: 11px;
     line-height: 1.7;
@@ -312,15 +451,15 @@
   .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .log-entry { display: flex; gap: 8px; }
   .log-entry .ts { color: var(--text-dim); flex-shrink: 0; }
-  .log-entry.ok .msg { color: var(--accent); }
-  .log-entry.warn .msg { color: var(--amber); }
+  .log-entry.ok .msg  { color: var(--accent); }
+  .log-entry.warn .msg{ color: var(--amber); }
   .log-entry.err .msg { color: var(--red); }
-  .log-entry.info .msg { color: var(--text); }
+  .log-entry.info .msg{ color: var(--text); }
+  .log-entry.motor .msg{ color: var(--blue); }
 
-  /* ── Send flash ── */
+  /* ── Flash overlay ── */
   .send-flash {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: rgba(57,255,20,0.06);
     pointer-events: none;
     opacity: 0;
@@ -329,176 +468,28 @@
   }
   .send-flash.active { opacity: 1; }
 
-  /* ── Scrollbar global ── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); }
 
-  /* ══════════════════════════════════════
-     MOTOR CONTROL PANEL
-  ══════════════════════════════════════ */
-  .motor-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  /* config helper note */
+  .cfg-note {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    padding: 10px 14px;
+    background: rgba(57,255,20,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
     margin-bottom: 18px;
   }
-  .motor-pin {
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    background: #070a07;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 4px 10px;
-  }
-  .motor-pin span { color: var(--amber); }
-
-  /* D-Pad layout */
-  .dpad-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 24px;
-  }
-  .dpad {
+  .cfg-note strong { color: var(--amber); }
+  .motor-topic-row {
     display: grid;
-    grid-template-columns: repeat(3, 56px);
-    grid-template-rows: repeat(3, 56px);
-    gap: 6px;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
   }
-  .dpad-btn {
-    width: 56px; height: 56px;
-    border-radius: 8px;
-    font-size: 18px;
-    display: flex; align-items: center; justify-content: center;
-    background: #0d1510;
-    border: 1px solid var(--accent-dim);
-    color: var(--accent);
-    cursor: pointer;
-    transition: all 0.12s;
-    padding: 0;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    box-shadow: 0 0 8px rgba(57,255,20,0.1);
-  }
-  .dpad-btn:hover { background: rgba(57,255,20,0.12); box-shadow: 0 0 16px rgba(57,255,20,0.25); transform: scale(1.05); }
-  .dpad-btn:active, .dpad-btn.pressed { background: rgba(57,255,20,0.22); box-shadow: 0 0 20px rgba(57,255,20,0.5); transform: scale(0.95); }
-  .dpad-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
-  .dpad-center { grid-column: 2; grid-row: 2; background: #070a07; border: 1px solid var(--border); color: var(--text-dim); font-size: 10px; letter-spacing: 0.05em; cursor: default; }
-  .dpad-center:hover { background: #070a07; box-shadow: none; transform: none; }
-
-  /* Zoom row */
-  .zoom-row {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .btn-zoom {
-    flex: 0 0 auto;
-    width: 120px; height: 48px;
-    border-radius: 8px;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    background: #0a0f1a;
-    border: 1px solid var(--blue-dim);
-    color: var(--blue);
-    cursor: pointer;
-    transition: all 0.12s;
-    padding: 0;
-    box-shadow: 0 0 8px rgba(0,191,255,0.1);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-zoom:hover { background: rgba(0,191,255,0.1); box-shadow: 0 0 16px rgba(0,191,255,0.25); transform: scale(1.04); }
-  .btn-zoom:active, .btn-zoom.pressed { background: rgba(0,191,255,0.2); box-shadow: 0 0 22px rgba(0,191,255,0.5); transform: scale(0.95); }
-  .btn-zoom:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  /* Answer row */
-  .answer-row {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-  }
-  .btn-answer {
-    width: 64px; height: 64px;
-    border-radius: 10px;
-    font-family: var(--head);
-    font-size: 18px;
-    font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    background: #100a1a;
-    border: 1px solid var(--purple-dim);
-    color: var(--purple);
-    cursor: pointer;
-    transition: all 0.12s;
-    padding: 0;
-    box-shadow: 0 0 8px rgba(191,95,255,0.1);
-    position: relative;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-answer .badge {
-    position: absolute;
-    bottom: 5px; right: 6px;
-    font-size: 8px;
-    font-family: var(--mono);
-    color: var(--purple-dim);
-    letter-spacing: 0;
-  }
-  .btn-answer:hover { background: rgba(191,95,255,0.1); box-shadow: 0 0 16px rgba(191,95,255,0.3); transform: scale(1.06); }
-  .btn-answer:active, .btn-answer.pressed { background: rgba(191,95,255,0.22); box-shadow: 0 0 24px rgba(191,95,255,0.55); transform: scale(0.94); }
-  .btn-answer:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  /* OK button */
-  .ok-row {
-    display: flex;
-    justify-content: center;
-  }
-  .btn-ok {
-    width: 140px; height: 52px;
-    border-radius: 10px;
-    font-family: var(--head);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: #0a1208;
-    border: 2px solid var(--accent-dim);
-    color: var(--accent);
-    cursor: pointer;
-    transition: all 0.12s;
-    padding: 0;
-    box-shadow: 0 0 12px rgba(57,255,20,0.15);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-ok:hover { background: rgba(57,255,20,0.1); box-shadow: 0 0 20px rgba(57,255,20,0.35); transform: scale(1.04); }
-  .btn-ok:active, .btn-ok.pressed { background: rgba(57,255,20,0.2); box-shadow: 0 0 28px rgba(57,255,20,0.55); transform: scale(0.95); }
-  .btn-ok:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  /* Section separator inside card */
-  .motor-sep {
-    height: 1px;
-    background: var(--border);
-    margin: 20px 0;
-  }
-  .motor-section-label {
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    margin-bottom: 14px;
-    text-align: center;
-  }
-
-  /* Active press flash */
-  @keyframes btn-flash {
-    0%   { opacity:1 }
-    50%  { opacity:0.4 }
-    100% { opacity:1 }
-  }
-  .btn-flashing { animation: btn-flash 0.15s ease; }
 </style>
 </head>
 <body>
@@ -508,7 +499,7 @@
 <header>
   <div class="logo-icon">📡</div>
   <div>
-    <h1>ESP32 LCD REMOTE SENDER<span>MQTT WebSocket Controller · HiveMQ Cloud</span></h1>
+    <h1>ESP32 LCD + MOTOR REMOTE<span>MQTT WebSocket Controller · HiveMQ Cloud</span></h1>
   </div>
 </header>
 
@@ -543,7 +534,7 @@
 
 <!-- Message Input -->
 <div class="card">
-  <div class="card-title">Pesan</div>
+  <div class="card-title">Pesan LCD</div>
   <div class="input-group">
     <label>Ketik pesan (max 32 karakter, otomatis wrap ke baris 2)</label>
     <textarea id="msg-input" maxlength="32" placeholder="Tulis pesan di sini…"></textarea>
@@ -554,74 +545,114 @@
   </div>
 </div>
 
-<!-- ══ MOTOR CONTROL PANEL ══ -->
+<!-- ════════════════════════════════════
+     MOTOR CONTROL CONFIG
+════════════════════════════════════ -->
 <div class="card">
-  <div class="card-title">Kontrol Motor</div>
+  <div class="card-title">⚙ Konfigurasi Motor (Maintenance)</div>
 
-  <!-- Pin info -->
-  <div class="motor-info">
-    <div class="motor-pin">MOTOR_ATAS <span>PIN 15</span></div>
-    <div class="motor-pin">MOTOR_KIRI <span>PIN 16</span></div>
-    <div class="motor-pin">MOTOR_KANAN <span>PIN 13</span></div>
-    <div class="motor-pin">MOTOR_BAWAH <span>PIN 14</span></div>
+  <div class="cfg-note">
+    Edit pin di bawah sesuai kebutuhan. Format: angka GPIO dipisah koma (misal <strong>15,16</strong>).
+    Kolom <strong>Ulangi</strong> = berapa kali sinyal dikirim berurutan (untuk jawaban A–D dan OKE).
+    Perubahan langsung berlaku saat tombol ditekan — tidak perlu refresh.
   </div>
 
-  <!-- D-Pad -->
-  <div class="motor-section-label">Arah Gerak</div>
-  <div class="dpad-wrapper">
-    <div class="dpad">
-      <!-- Row 1 -->
-      <div></div>
-      <button class="dpad-btn motor-btn" id="btn-atas" data-cmd="atas" disabled title="Atas (PIN 15 HIGH)">▲</button>
-      <div></div>
-      <!-- Row 2 -->
-      <button class="dpad-btn motor-btn" id="btn-kiri" data-cmd="kiri" disabled title="Kiri (PIN 16 HIGH)">◄</button>
-      <div class="dpad-btn dpad-center">MTR</div>
-      <button class="dpad-btn motor-btn" id="btn-kanan" data-cmd="kanan" disabled title="Kanan (PIN 13 HIGH)">►</button>
-      <!-- Row 3 -->
-      <div></div>
-      <button class="dpad-btn motor-btn" id="btn-bawah" data-cmd="bawah" disabled title="Bawah (PIN 14 HIGH)">▼</button>
-      <div></div>
+  <div class="motor-config-grid" id="cfg-grid">
+    <!-- Diisi oleh JS -->
+  </div>
+
+  <div class="motor-topic-row" style="margin-top:18px;">
+    <div class="input-group" style="margin:0">
+      <label>Topic Motor (Publish)</label>
+      <input type="text" id="cfg-motor-topic" value="esp32/motor/control">
+    </div>
+    <div class="input-group" style="margin:0">
+      <label>Delay antar ulangan (ms)</label>
+      <input type="text" id="cfg-repeat-delay" value="300">
     </div>
   </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MOTOR CONTROL PANEL
+════════════════════════════════════ -->
+<div class="card">
+  <div class="card-title">🕹 Motor Control</div>
+
+  <!-- Directional pad -->
+  <div class="section-sub">Arah Gerak</div>
+  <div class="motor-pad">
+    <div class="empty-cell"></div>
+    <button class="motor-btn dir" data-action="atas" disabled>
+      <span class="icon">▲</span>
+      <span class="lbl">Atas</span>
+    </button>
+    <div class="empty-cell"></div>
+
+    <button class="motor-btn dir" data-action="kiri" disabled>
+      <span class="icon">◀</span>
+      <span class="lbl">Kiri</span>
+    </button>
+    <div class="empty-cell"></div>
+    <button class="motor-btn dir" data-action="kanan" disabled>
+      <span class="icon">▶</span>
+      <span class="lbl">Kanan</span>
+    </button>
+
+    <div class="empty-cell"></div>
+    <button class="motor-btn dir" data-action="bawah" disabled>
+      <span class="icon">▼</span>
+      <span class="lbl">Bawah</span>
+    </button>
+    <div class="empty-cell"></div>
+  </div>
+
+  <div class="motor-divider"></div>
 
   <!-- Zoom -->
-  <div class="motor-section-label">Zoom</div>
+  <div class="section-sub">Zoom</div>
   <div class="zoom-row">
-    <button class="btn-zoom motor-btn" id="btn-zoomin" data-cmd="zoom_in" disabled title="Zoom In (PIN 15+16 HIGH)">
-      🔍 <span>ZOOM IN</span>
+    <button class="motor-btn zoom" data-action="zoom_in" disabled>
+      <span class="icon">🔍+</span>
+      <span class="lbl">Zoom In</span>
     </button>
-    <button class="btn-zoom motor-btn" id="btn-zoomout" data-cmd="zoom_out" disabled title="Zoom Out (PIN 14+13 HIGH)">
-      🔎 <span>ZOOM OUT</span>
+    <button class="motor-btn zoom" data-action="zoom_out" disabled>
+      <span class="icon">🔍−</span>
+      <span class="lbl">Zoom Out</span>
     </button>
   </div>
 
-  <div class="motor-sep"></div>
+  <div class="motor-divider"></div>
 
-  <!-- Jawaban A–D -->
-  <div class="motor-section-label">Pilihan Jawaban</div>
+  <!-- Jawaban -->
+  <div class="section-sub">Jawaban</div>
   <div class="answer-row">
-    <button class="btn-answer motor-btn" id="btn-jawab-a" data-cmd="jawaban_a" disabled title="Jawaban A (sinyal 1x)">
-      A <span class="badge">×1</span>
+    <button class="motor-btn answer" data-action="jawaban_a" disabled>
+      <span class="icon">🅐</span>
+      <span class="lbl">Jawaban A</span>
     </button>
-    <button class="btn-answer motor-btn" id="btn-jawab-b" data-cmd="jawaban_b" disabled title="Jawaban B (sinyal 2x)">
-      B <span class="badge">×2</span>
+    <button class="motor-btn answer" data-action="jawaban_b" disabled>
+      <span class="icon">🅑</span>
+      <span class="lbl">Jawaban B</span>
     </button>
-    <button class="btn-answer motor-btn" id="btn-jawab-c" data-cmd="jawaban_c" disabled title="Jawaban C (sinyal 3x)">
-      C <span class="badge">×3</span>
+    <button class="motor-btn answer" data-action="jawaban_c" disabled>
+      <span class="icon">🅒</span>
+      <span class="lbl">Jawaban C</span>
     </button>
-    <button class="btn-answer motor-btn" id="btn-jawab-d" data-cmd="jawaban_d" disabled title="Jawaban D (sinyal 4x)">
-      D <span class="badge">×4</span>
+    <button class="motor-btn answer" data-action="jawaban_d" disabled>
+      <span class="icon">🅓</span>
+      <span class="lbl">Jawaban D</span>
     </button>
   </div>
 
-  <div class="motor-sep"></div>
+  <div class="motor-divider"></div>
 
-  <!-- OK -->
-  <div class="motor-section-label">Konfirmasi</div>
-  <div class="ok-row">
-    <button class="btn-ok motor-btn" id="btn-ok" data-cmd="oke" disabled title="OK (PIN 15 HIGH 2x)">
-      ✔ &nbsp;OKE
+  <!-- OKE -->
+  <div class="section-sub">Konfirmasi</div>
+  <div class="oke-row">
+    <button class="motor-btn oke" data-action="oke" disabled>
+      <span class="icon">✅</span>
+      <span class="lbl">OKE</span>
     </button>
   </div>
 </div>
@@ -632,7 +663,7 @@
   <div class="row-inputs" style="margin-bottom:14px">
     <div class="input-group" style="margin:0">
       <label>Host (HiveMQ Cloud)</label>
-      <input type="text" id="cfg-host" value="f4173eb45bcf45c380f00b8ffeec2641.s1.eu.hivemq.cloud">
+      <input type="text" id="cfg-host" placeholder="xxxx.hivemq.cloud">
     </div>
     <div class="input-group" style="margin:0">
       <label>Port (WSS)</label>
@@ -642,22 +673,16 @@
   <div class="row-inputs" style="margin-bottom:14px">
     <div class="input-group" style="margin:0">
       <label>Username</label>
-      <input type="text" id="cfg-user" value="fikrialifprojekx">
+      <input type="text" id="cfg-user" placeholder="mqtt-username">
     </div>
     <div class="input-group" style="margin:0">
       <label>Password</label>
       <input type="password" id="cfg-pass" placeholder="••••••••">
     </div>
   </div>
-  <div class="row-inputs" style="margin-bottom:14px">
-    <div class="input-group" style="margin:0">
-      <label>Topic LCD</label>
-      <input type="text" id="cfg-topic" value="esp32/lcd/message">
-    </div>
-    <div class="input-group" style="margin:0">
-      <label>Topic Motor</label>
-      <input type="text" id="cfg-topic-motor" value="esp32/motor/control">
-    </div>
+  <div class="input-group" style="margin-bottom:18px">
+    <label>Topic Publish LCD</label>
+    <input type="text" id="cfg-topic" value="esp32/lcd/message">
   </div>
   <div class="btn-row">
     <button class="btn-connect" id="connect-btn" onclick="toggleConnect()">⚡ HUBUNGKAN</button>
@@ -673,286 +698,323 @@
 </div>
 
 <script>
-  // ── PIN definitions (matching ESP32 #define) ──
-  const PIN = {
-    MOTOR_ATAS:  15,
-    MOTOR_KIRI:  16,
-    MOTOR_KANAN: 13,
-    MOTOR_BAWAH: 14,
-  };
+// ══════════════════════════════════════════════════════
+//  MOTOR ACTION CONFIG
+//  Format pins: array of GPIO numbers yang di-HIGH
+//  repeat: berapa kali sinyal dikirim berurutan
+//  Ubah di sini atau langsung di kotak config di UI
+// ══════════════════════════════════════════════════════
+const MOTOR_ACTIONS = [
+  { id: 'atas',      label: 'Atas',       pins: [15],             repeat: 1 },
+  { id: 'bawah',     label: 'Bawah',      pins: [14],             repeat: 1 },
+  { id: 'kanan',     label: 'Kanan',      pins: [13],             repeat: 1 },
+  { id: 'kiri',      label: 'Kiri',       pins: [16],             repeat: 1 },
+  { id: 'zoom_in',   label: 'Zoom In',    pins: [15, 16],         repeat: 1 },
+  { id: 'zoom_out',  label: 'Zoom Out',   pins: [14, 13],         repeat: 1 },
+  { id: 'jawaban_a', label: 'Jawaban A',  pins: [15, 16, 13, 15], repeat: 1 },
+  { id: 'jawaban_b', label: 'Jawaban B',  pins: [15, 16, 13, 15], repeat: 2 },
+  { id: 'jawaban_c', label: 'Jawaban C',  pins: [15, 16, 13, 15], repeat: 3 },
+  { id: 'jawaban_d', label: 'Jawaban D',  pins: [15, 16, 13, 15], repeat: 4 },
+  { id: 'oke',       label: 'OKE',        pins: [15],             repeat: 2 },
+];
 
-  // ── Motor command map ──
-  // Each entry: { pins: [...], repeat: N, label: '...' }
-  // repeat = how many times the HIGH pulse sequence fires
-  const MOTOR_CMDS = {
-    atas:      { pins: [PIN.MOTOR_ATAS],  repeat: 1, label: 'ATAS (PIN 15 HIGH)' },
-    bawah:     { pins: [PIN.MOTOR_BAWAH], repeat: 1, label: 'BAWAH (PIN 14 HIGH)' },
-    kanan:     { pins: [PIN.MOTOR_KANAN], repeat: 1, label: 'KANAN (PIN 13 HIGH)' },
-    kiri:      { pins: [PIN.MOTOR_KIRI],  repeat: 1, label: 'KIRI (PIN 16 HIGH)' },
-    zoom_in:   { pins: [PIN.MOTOR_ATAS, PIN.MOTOR_KIRI], repeat: 1, label: 'ZOOM IN (PIN 15+16 HIGH)' },
-    zoom_out:  { pins: [PIN.MOTOR_BAWAH, PIN.MOTOR_KANAN], repeat: 1, label: 'ZOOM OUT (PIN 14+13 HIGH)' },
-    jawaban_a: { pins: [PIN.MOTOR_ATAS, PIN.MOTOR_KIRI, PIN.MOTOR_KANAN, PIN.MOTOR_ATAS], repeat: 1, label: 'JAWABAN A (1×)' },
-    jawaban_b: { pins: [PIN.MOTOR_ATAS, PIN.MOTOR_KIRI, PIN.MOTOR_KANAN, PIN.MOTOR_ATAS], repeat: 2, label: 'JAWABAN B (2×)' },
-    jawaban_c: { pins: [PIN.MOTOR_ATAS, PIN.MOTOR_KIRI, PIN.MOTOR_KANAN, PIN.MOTOR_ATAS], repeat: 3, label: 'JAWABAN C (3×)' },
-    jawaban_d: { pins: [PIN.MOTOR_ATAS, PIN.MOTOR_KIRI, PIN.MOTOR_KANAN, PIN.MOTOR_ATAS], repeat: 4, label: 'JAWABAN D (4×)' },
-    oke:       { pins: [PIN.MOTOR_ATAS],  repeat: 2, label: 'OKE (PIN 15 HIGH 2×)' },
-  };
+// ══════════════════════════════════════════════════════
+//  Build Config Boxes
+// ══════════════════════════════════════════════════════
+function buildConfigGrid() {
+  const grid = document.getElementById('cfg-grid');
+  grid.innerHTML = '';
 
-  // ── State ──
-  let client = null;
-  let isConnected = false;
+  MOTOR_ACTIONS.forEach((action, idx) => {
+    const box = document.createElement('div');
+    box.className = 'cfg-box';
+    box.innerHTML = `
+      <div class="cfg-box-label">${action.label}</div>
+      <input
+        class="cfg-box-input"
+        type="text"
+        id="cfg-pins-${action.id}"
+        value="${action.pins.join(',')}"
+        placeholder="15,16"
+        title="GPIO pins yang di-HIGH, pisah koma"
+      >
+      <div class="cfg-box-badge">GPIO (HIGH)</div>
+      <div class="cfg-repeat-wrap">
+        <label for="cfg-repeat-${action.id}">Ulangi:</label>
+        <input
+          class="cfg-repeat-input"
+          type="number"
+          id="cfg-repeat-${action.id}"
+          value="${action.repeat}"
+          min="1" max="99"
+        >
+        <span class="cfg-box-badge">× kirim</span>
+      </div>
+    `;
+    grid.appendChild(box);
+  });
+}
 
-  // ── LCD Render ──
-  const COLS = 16;
-  function buildLcd() {
-    ['row1','row2'].forEach(id => {
-      const row = document.getElementById(id);
-      row.innerHTML = '';
-      for (let i = 0; i < COLS; i++) {
-        const cell = document.createElement('div');
+// Read current config from UI boxes
+function getActionConfig(actionId) {
+  const pinsEl   = document.getElementById('cfg-pins-' + actionId);
+  const repeatEl = document.getElementById('cfg-repeat-' + actionId);
+  const pins = (pinsEl ? pinsEl.value : '')
+    .split(',')
+    .map(s => parseInt(s.trim()))
+    .filter(n => !isNaN(n));
+  const repeat = repeatEl ? (parseInt(repeatEl.value) || 1) : 1;
+  return { pins, repeat };
+}
+
+// ══════════════════════════════════════════════════════
+//  State
+// ══════════════════════════════════════════════════════
+let client      = null;
+let isConnected = false;
+
+// ══════════════════════════════════════════════════════
+//  LCD Render
+// ══════════════════════════════════════════════════════
+const COLS = 16;
+function buildLcd() {
+  ['row1','row2'].forEach(id => {
+    const row = document.getElementById(id);
+    row.innerHTML = '';
+    for (let i = 0; i < COLS; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'lcd-cell empty';
+      cell.id = id + '-' + i;
+      cell.textContent = ' ';
+      row.appendChild(cell);
+    }
+  });
+}
+
+function updateLcd(text) {
+  const padded = (text + ' '.repeat(32)).substring(0, 32);
+  const line1 = padded.substring(0, 16);
+  const line2 = padded.substring(16, 32);
+  const origLen = text.length;
+
+  [line1, line2].forEach((line, rowIdx) => {
+    const rowId = rowIdx === 0 ? 'row1' : 'row2';
+    for (let i = 0; i < 16; i++) {
+      const cell = document.getElementById(rowId + '-' + i);
+      const globalIdx = rowIdx * 16 + i;
+      const ch = line[i];
+      const isBlank = globalIdx >= origLen;
+      const isOver  = globalIdx >= 32 && globalIdx < origLen;
+      if (isOver) {
+        cell.className = 'lcd-cell overflow';
+        cell.textContent = ch || ' ';
+      } else if (isBlank) {
         cell.className = 'lcd-cell empty';
-        cell.id = id + '-' + i;
         cell.textContent = ' ';
-        row.appendChild(cell);
-      }
-    });
-  }
-
-  function updateLcd(text) {
-    const padded = (text + ' '.repeat(32)).substring(0, 32);
-    const line1 = padded.substring(0, 16);
-    const line2 = padded.substring(16, 32);
-    const origLen = text.length;
-
-    [line1, line2].forEach((line, rowIdx) => {
-      const rowId = rowIdx === 0 ? 'row1' : 'row2';
-      for (let i = 0; i < 16; i++) {
-        const cell = document.getElementById(rowId + '-' + i);
-        const globalIdx = rowIdx * 16 + i;
-        const ch = line[i];
-        const isBlank = globalIdx >= origLen;
-        const isOver = globalIdx >= 32 && globalIdx < origLen;
-
-        if (isOver) {
-          cell.className = 'lcd-cell overflow';
-          cell.textContent = ch || ' ';
-        } else if (isBlank) {
-          cell.className = 'lcd-cell empty';
-          cell.textContent = ' ';
-        } else {
-          cell.className = 'lcd-cell';
-          cell.textContent = ch === ' ' ? '\u00a0' : ch;
-        }
-      }
-    });
-
-    const counter = document.getElementById('char-count');
-    counter.textContent = Math.min(origLen, 32);
-    counter.className = 'count' + (origLen > 32 ? ' over' : origLen > 24 ? ' warn' : '');
-  }
-
-  // ── Input ──
-  document.getElementById('msg-input').addEventListener('input', function() {
-    if (this.value.length > 32) this.value = this.value.substring(0, 32);
-    updateLcd(this.value);
-  });
-  document.getElementById('clear-btn').addEventListener('click', () => {
-    document.getElementById('msg-input').value = '';
-    updateLcd('');
-  });
-
-  // ── Log ──
-  function log(msg, type = 'info') {
-    const box = document.getElementById('log-box');
-    const now = new Date();
-    const ts = now.toTimeString().substring(0,8);
-    const entry = document.createElement('div');
-    entry.className = 'log-entry ' + type;
-    entry.innerHTML = `<span class="ts">[${ts}]</span><span class="msg">${msg}</span>`;
-    box.appendChild(entry);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  // ── Status ──
-  function setStatus(state, text) {
-    const dot = document.getElementById('status-dot');
-    const statusText = document.getElementById('status-text');
-    dot.className = 'dot ' + state;
-    statusText.textContent = text;
-  }
-
-  // ── Enable / disable motor buttons ──
-  function setMotorBtns(enabled) {
-    document.querySelectorAll('.motor-btn').forEach(btn => {
-      btn.disabled = !enabled;
-    });
-  }
-
-  // ── Motor publish ──
-  function sendMotorCmd(cmd) {
-    if (!isConnected || !client) {
-      log('Belum terhubung ke broker.', 'err');
-      return;
-    }
-    const def = MOTOR_CMDS[cmd];
-    if (!def) return;
-
-    const topic = document.getElementById('cfg-topic-motor').value.trim();
-    const payload = JSON.stringify({
-      command: cmd,
-      pins: def.pins,
-      repeat: def.repeat,
-    });
-
-    client.publish(topic, payload, { qos: 1 }, (err) => {
-      if (err) {
-        log('Gagal kirim motor: ' + err.message, 'err');
       } else {
-        log(`✓ Motor → ${def.label}`, 'ok');
-        log(`  Payload: ${payload}`, 'info');
-        flashScreen();
+        cell.className = 'lcd-cell';
+        cell.textContent = ch === ' ' ? '\u00a0' : ch;
       }
-    });
-  }
-
-  // ── Bind motor buttons ──
-  document.querySelectorAll('.motor-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cmd = btn.dataset.cmd;
-      if (!cmd) return;
-
-      // Visual press feedback
-      btn.classList.add('pressed');
-      setTimeout(() => btn.classList.remove('pressed'), 200);
-
-      sendMotorCmd(cmd);
-    });
+    }
   });
 
-  // ── MQTT ──
-  function toggleConnect() {
-    if (isConnected || client) {
-      disconnect();
-    } else {
-      connect();
-    }
-  }
+  const counter = document.getElementById('char-count');
+  counter.textContent = Math.min(origLen, 32);
+  counter.className = 'count' + (origLen > 32 ? ' over' : origLen > 24 ? ' warn' : '');
+}
 
-  function connect() {
-    const host  = document.getElementById('cfg-host').value.trim();
-    const port  = parseInt(document.getElementById('cfg-port').value.trim()) || 8884;
-    const user  = document.getElementById('cfg-user').value.trim();
-    const pass  = document.getElementById('cfg-pass').value;
-    const topic = document.getElementById('cfg-topic').value.trim();
+document.getElementById('msg-input').addEventListener('input', function() {
+  if (this.value.length > 32) this.value = this.value.substring(0, 32);
+  updateLcd(this.value);
+});
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('msg-input').value = '';
+  updateLcd('');
+});
 
-    if (!host) { log('Host MQTT tidak boleh kosong!', 'err'); return; }
+// ══════════════════════════════════════════════════════
+//  Log & Status
+// ══════════════════════════════════════════════════════
+function log(msg, type = 'info') {
+  const box  = document.getElementById('log-box');
+  const ts   = new Date().toTimeString().substring(0, 8);
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  entry.innerHTML = `<span class="ts">[${ts}]</span><span class="msg">${msg}</span>`;
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+}
 
-    const url = `wss://${host}:${port}/mqtt`;
-    document.getElementById('broker-host').textContent = `${host}:${port}`;
+function setStatus(state, text) {
+  document.getElementById('status-dot').className = 'dot ' + state;
+  document.getElementById('status-text').textContent = text;
+}
 
-    setStatus('connecting', 'Menghubungkan…');
-    log(`Mencoba koneksi ke ${url}`, 'warn');
+// ══════════════════════════════════════════════════════
+//  Enable / Disable all motor buttons
+// ══════════════════════════════════════════════════════
+function setMotorBtnsDisabled(disabled) {
+  document.querySelectorAll('.motor-btn').forEach(btn => btn.disabled = disabled);
+}
 
-    const opts = {
-      clientId: 'lcd-sender-' + Math.random().toString(16).substring(2,8),
-      clean: true,
-      reconnectPeriod: 0,
-    };
-    if (user) { opts.username = user; opts.password = pass; }
+// ══════════════════════════════════════════════════════
+//  MQTT
+// ══════════════════════════════════════════════════════
+function toggleConnect() {
+  isConnected || client ? disconnect() : connect();
+}
 
-    try {
-      client = mqtt.connect(url, opts);
-    } catch(e) {
-      log('Gagal inisialisasi MQTT: ' + e.message, 'err');
-      setStatus('error', 'Error');
-      return;
-    }
+function connect() {
+  const host  = document.getElementById('cfg-host').value.trim();
+  const port  = parseInt(document.getElementById('cfg-port').value.trim()) || 8884;
+  const user  = document.getElementById('cfg-user').value.trim();
+  const pass  = document.getElementById('cfg-pass').value;
 
-    client.on('connect', () => {
-      isConnected = true;
-      setStatus('connected', 'Terhubung ke broker');
-      log('✓ Terhubung ke ' + host, 'ok');
-      document.getElementById('send-btn').disabled = false;
-      setMotorBtns(true);
-      const btn = document.getElementById('connect-btn');
-      btn.textContent = '✕ PUTUSKAN';
-      btn.className = 'btn-connect disconnect';
-    });
+  if (!host) { log('Host MQTT tidak boleh kosong!', 'err'); return; }
 
-    client.on('error', (err) => {
-      setStatus('error', 'Error koneksi');
-      log('Error: ' + (err.message || err), 'err');
-      document.getElementById('send-btn').disabled = true;
-      setMotorBtns(false);
-    });
+  const url = `wss://${host}:${port}/mqtt`;
+  document.getElementById('broker-host').textContent = `${host}:${port}`;
+  setStatus('connecting', 'Menghubungkan…');
+  log(`Mencoba koneksi ke ${url}`, 'warn');
 
-    client.on('close', () => {
-      if (isConnected) {
-        isConnected = false;
-        setStatus('', 'Koneksi terputus');
-        log('Koneksi ditutup.', 'warn');
-        document.getElementById('send-btn').disabled = true;
-        setMotorBtns(false);
-        const btn = document.getElementById('connect-btn');
-        btn.textContent = '⚡ HUBUNGKAN';
-        btn.className = 'btn-connect';
-        document.getElementById('broker-host').textContent = '—';
-      }
-    });
+  const opts = {
+    clientId: 'lcd-sender-' + Math.random().toString(16).substring(2, 8),
+    clean: true,
+    reconnectPeriod: 0,
+  };
+  if (user) { opts.username = user; opts.password = pass; }
 
-    client.on('offline', () => {
-      setStatus('error', 'Offline');
-      log('Client offline.', 'warn');
-    });
-  }
+  try { client = mqtt.connect(url, opts); }
+  catch(e) { log('Gagal inisialisasi MQTT: ' + e.message, 'err'); setStatus('error', 'Error'); return; }
 
-  function disconnect() {
-    if (client) {
-      client.end(true);
-      client = null;
+  client.on('connect', () => {
+    isConnected = true;
+    setStatus('connected', 'Terhubung ke broker');
+    log('✓ Terhubung ke ' + host, 'ok');
+    document.getElementById('send-btn').disabled = false;
+    setMotorBtnsDisabled(false);
+    const btn = document.getElementById('connect-btn');
+    btn.textContent = '✕ PUTUSKAN';
+    btn.className = 'btn-connect disconnect';
+  });
+
+  client.on('error', (err) => {
+    setStatus('error', 'Error koneksi');
+    log('Error: ' + (err.message || err), 'err');
+    document.getElementById('send-btn').disabled = true;
+    setMotorBtnsDisabled(true);
+  });
+
+  client.on('close', () => {
+    if (isConnected) {
       isConnected = false;
-      setStatus('', 'Terputus');
+      setStatus('', 'Koneksi terputus');
+      log('Koneksi ditutup.', 'warn');
       document.getElementById('send-btn').disabled = true;
-      setMotorBtns(false);
+      setMotorBtnsDisabled(true);
       const btn = document.getElementById('connect-btn');
       btn.textContent = '⚡ HUBUNGKAN';
       btn.className = 'btn-connect';
       document.getElementById('broker-host').textContent = '—';
-      log('Koneksi diputus manual.', 'info');
     }
-  }
-
-  // ── Send LCD ──
-  document.getElementById('send-btn').addEventListener('click', () => {
-    if (!isConnected || !client) { log('Belum terhubung ke broker.', 'err'); return; }
-
-    const rawText = document.getElementById('msg-input').value;
-    const text = rawText.substring(0, 32);
-    const line1 = text.substring(0, 16).padEnd(16, ' ');
-    const line2 = text.substring(16, 32).padEnd(16, ' ');
-    const topic = document.getElementById('cfg-topic').value.trim();
-    const payload = JSON.stringify({ line1: line1.trimEnd(), line2: line2.trimEnd() });
-
-    client.publish(topic, payload, { qos: 1 }, (err) => {
-      if (err) {
-        log('Gagal kirim: ' + err.message, 'err');
-      } else {
-        log(`✓ Pesan terkirim → ${topic}`, 'ok');
-        log(`  Payload: ${payload}`, 'info');
-        flashScreen();
-      }
-    });
   });
 
-  function flashScreen() {
-    const f = document.getElementById('flash');
-    f.classList.add('active');
-    setTimeout(() => f.classList.remove('active'), 150);
-  }
+  client.on('offline', () => { setStatus('error', 'Offline'); log('Client offline.', 'warn'); });
+}
 
-  // ── Init ──
-  buildLcd();
-  updateLcd('');
+function disconnect() {
+  if (client) {
+    client.end(true);
+    client = null;
+    isConnected = false;
+    setStatus('', 'Terputus');
+    document.getElementById('send-btn').disabled = true;
+    setMotorBtnsDisabled(true);
+    const btn = document.getElementById('connect-btn');
+    btn.textContent = '⚡ HUBUNGKAN';
+    btn.className = 'btn-connect';
+    document.getElementById('broker-host').textContent = '—';
+    log('Koneksi diputus manual.', 'info');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  Send LCD message
+// ══════════════════════════════════════════════════════
+document.getElementById('send-btn').addEventListener('click', () => {
+  if (!isConnected || !client) { log('Belum terhubung ke broker.', 'err'); return; }
+  const rawText = document.getElementById('msg-input').value;
+  const text  = rawText.substring(0, 32);
+  const line1 = text.substring(0, 16).padEnd(16, ' ');
+  const line2 = text.substring(16, 32).padEnd(16, ' ');
+  const topic = document.getElementById('cfg-topic').value.trim();
+  const payload = JSON.stringify({ line1: line1.trimEnd(), line2: line2.trimEnd() });
+
+  client.publish(topic, payload, { qos: 1 }, (err) => {
+    if (err) { log('Gagal kirim: ' + err.message, 'err'); }
+    else {
+      log(`✓ Pesan terkirim → ${topic}`, 'ok');
+      log(`  Payload: ${payload}`, 'info');
+      flashScreen();
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════
+//  Motor publish — sends one payload per repetition
+//  Payload: { pins: [15,16], action: "zoom_in" }
+// ══════════════════════════════════════════════════════
+function publishMotor(actionId, btn) {
+  if (!isConnected || !client) { log('Belum terhubung ke broker.', 'err'); return; }
+
+  const { pins, repeat } = getActionConfig(actionId);
+  const topic = document.getElementById('cfg-motor-topic').value.trim() || 'esp32/motor/control';
+  const delay = parseInt(document.getElementById('cfg-repeat-delay').value) || 300;
+
+  if (pins.length === 0) { log(`Config pins "${actionId}" kosong!`, 'err'); return; }
+
+  // Visual feedback
+  btn.classList.add('firing');
+  setTimeout(() => btn.classList.remove('firing'), 200 * repeat);
+
+  const pinsStr = pins.join(',');
+  log(`▶ MOTOR [${actionId.toUpperCase()}] → pins [${pinsStr}] × ${repeat}`, 'motor');
+
+  function sendOne(i) {
+    if (i >= repeat) return;
+    const payload = JSON.stringify({ action: actionId, pins: pins, seq: i + 1, total: repeat });
+    client.publish(topic, payload, { qos: 1 }, (err) => {
+      if (err) {
+        log(`  ✗ Gagal kirim (seq ${i+1}): ${err.message}`, 'err');
+      } else {
+        log(`  ✓ seq ${i+1}/${repeat} → ${topic}`, 'ok');
+      }
+      if (i + 1 < repeat) {
+        setTimeout(() => sendOne(i + 1), delay);
+      }
+    });
+  }
+  sendOne(0);
+}
+
+// ── Wire up motor buttons ──
+document.querySelectorAll('.motor-btn[data-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    publishMotor(btn.dataset.action, btn);
+  });
+});
+
+function flashScreen() {
+  const f = document.getElementById('flash');
+  f.classList.add('active');
+  setTimeout(() => f.classList.remove('active'), 150);
+}
+
+// ── Init ──
+buildLcd();
+updateLcd('');
+buildConfigGrid();
+setMotorBtnsDisabled(true);
 </script>
 </body>
 </html>
