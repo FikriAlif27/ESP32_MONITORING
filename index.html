@@ -589,18 +589,19 @@
 //  repeat: berapa kali sinyal dikirim berurutan
 //  Ubah di sini atau langsung di kotak config di UI
 // ══════════════════════════════════════════════════════
+// GPIO: ATAS=2, KIRI=15, KANAN=13, BAWAH=14
 const MOTOR_ACTIONS = [
-  { id: 'atas',      label: 'Atas',       pins: [15],             repeat: 1 },
-  { id: 'bawah',     label: 'Bawah',      pins: [14],             repeat: 1 },
-  { id: 'kanan',     label: 'Kanan',      pins: [13],             repeat: 1 },
-  { id: 'kiri',      label: 'Kiri',       pins: [16],             repeat: 1 },
-  { id: 'zoom_in',   label: 'Zoom In',    pins: [15, 16],         repeat: 1 },
-  { id: 'zoom_out',  label: 'Zoom Out',   pins: [14, 13],         repeat: 1 },
-  { id: 'jawaban_a', label: 'Jawaban A',  pins: [15, 16, 13, 15], repeat: 1 },
-  { id: 'jawaban_b', label: 'Jawaban B',  pins: [15, 16, 13, 15], repeat: 2 },
-  { id: 'jawaban_c', label: 'Jawaban C',  pins: [15, 16, 13, 15], repeat: 3 },
-  { id: 'jawaban_d', label: 'Jawaban D',  pins: [15, 16, 13, 15], repeat: 4 },
-  { id: 'oke',       label: 'OKE',        pins: [15],             repeat: 2 },
+  { id: 'atas',      label: 'Atas',       pins: [2],            repeat: 1 },
+  { id: 'bawah',     label: 'Bawah',      pins: [14],           repeat: 1 },
+  { id: 'kanan',     label: 'Kanan',      pins: [13],           repeat: 1 },
+  { id: 'kiri',      label: 'Kiri',       pins: [15],           repeat: 1 },
+  { id: 'zoom_in',   label: 'Zoom In',    pins: [2, 15],        repeat: 1 },
+  { id: 'zoom_out',  label: 'Zoom Out',   pins: [14, 13],       repeat: 1 },
+  { id: 'jawaban_a', label: 'Jawaban A',  pins: [2, 15, 13, 2], repeat: 1 },
+  { id: 'jawaban_b', label: 'Jawaban B',  pins: [2, 15, 13, 2], repeat: 2 },
+  { id: 'jawaban_c', label: 'Jawaban C',  pins: [2, 15, 13, 2], repeat: 3 },
+  { id: 'jawaban_d', label: 'Jawaban D',  pins: [2, 15, 13, 2], repeat: 4 },
+  { id: 'oke',       label: 'OKE',        pins: [2],            repeat: 2 },
 ];
 
 // ══════════════════════════════════════════════════════
