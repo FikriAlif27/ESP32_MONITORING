@@ -17,10 +17,6 @@
     --red:         #ff3b3b;
     --blue:        #38bdf8;
     --purple:      #c084fc;
-    --lcd-bg:      #0d1a0a;
-    --lcd-pixel:   #39ff14;
-    --lcd-dim:     #0f3a08;
-    --lcd-off:     #071204;
     --text:        #a8c8a0;
     --text-dim:    #3a5a34;
     --mono:        'Share Tech Mono', monospace;
@@ -129,68 +125,6 @@
     background: var(--border);
   }
 
-  /* ── LCD ── */
-  .lcd-wrapper { display: flex; justify-content: center; margin-bottom: 10px; }
-  .lcd-outer {
-    background: #1a2414;
-    border: 3px solid #2a3a22;
-    border-radius: 8px;
-    padding: 18px 22px;
-    box-shadow: 0 0 0 1px #0d1a0a, 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
-    position: relative;
-  }
-  .lcd-screen {
-    background: var(--lcd-bg);
-    border: 2px solid #0a1408;
-    border-radius: 3px;
-    padding: 12px 10px;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.6), inset 0 0 4px rgba(57,255,20,0.08), 0 0 0 1px #0f1e0a;
-    position: relative;
-    overflow: hidden;
-  }
-  .lcd-screen::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
-    pointer-events: none;
-    z-index: 2;
-  }
-  .lcd-screen::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 40%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 3;
-  }
-  .lcd-row { display: flex; gap: 3px; position: relative; z-index: 1; }
-  .lcd-row + .lcd-row { margin-top: 8px; }
-  .lcd-cell {
-    width: 18px; height: 26px;
-    background: var(--lcd-off);
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--lcd-pixel);
-    text-shadow: 0 0 6px var(--lcd-pixel), 0 0 10px rgba(57,255,20,0.4);
-    transition: background 0.1s, color 0.1s;
-    user-select: none;
-  }
-  .lcd-cell.empty { color: var(--lcd-dim); background: var(--lcd-off); }
-  .lcd-cell.overflow { background: rgba(255,59,59,0.2); color: var(--red); text-shadow: 0 0 6px var(--red); }
-  .lcd-label { display: flex; justify-content: space-between; margin-top: 10px; }
-  .lcd-label span { font-size: 9px; letter-spacing: 0.1em; color: var(--text-dim); }
-
-  .char-counter {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 6px; margin-top: 12px; font-size: 11px;
-  }
-  .char-counter .count { font-family: var(--head); font-size: 13px; color: var(--accent); }
-  .char-counter .count.warn { color: var(--amber); }
-  .char-counter .count.over { color: var(--red); }
 
   .input-group { margin-bottom: 20px; }
   label {
@@ -458,15 +392,6 @@
   .log-entry.motor .msg{ color: var(--blue); }
 
   /* ── Flash overlay ── */
-  .send-flash {
-    position: fixed; inset: 0;
-    background: rgba(57,255,20,0.06);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.05s;
-    z-index: 999;
-  }
-  .send-flash.active { opacity: 1; }
 
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -494,8 +419,6 @@
 </head>
 <body>
 
-<div class="send-flash" id="flash"></div>
-
 <header>
   <div class="logo-icon">📡</div>
   <div>
@@ -510,40 +433,6 @@
   <span id="broker-host">—</span>
 </div>
 
-<!-- LCD Preview -->
-<div class="card">
-  <div class="card-title">Simulasi LCD 16×2</div>
-  <div class="lcd-wrapper">
-    <div class="lcd-outer">
-      <div class="lcd-screen">
-        <div class="lcd-row" id="row1"></div>
-        <div class="lcd-row" id="row2"></div>
-      </div>
-      <div class="lcd-label">
-        <span>BARIS 1 (1–16)</span>
-        <span>BARIS 2 (17–32)</span>
-      </div>
-    </div>
-  </div>
-  <div class="char-counter">
-    <span>Karakter:</span>
-    <span class="count" id="char-count">0</span>
-    <span>/ 32</span>
-  </div>
-</div>
-
-<!-- Message Input -->
-<div class="card">
-  <div class="card-title">Pesan LCD</div>
-  <div class="input-group">
-    <label>Ketik pesan (max 32 karakter, otomatis wrap ke baris 2)</label>
-    <textarea id="msg-input" maxlength="32" placeholder="Tulis pesan di sini…"></textarea>
-  </div>
-  <div class="btn-row">
-    <button class="btn-primary" id="send-btn" disabled>▶ KIRIM PESAN</button>
-    <button class="btn-secondary" id="clear-btn">✕ HAPUS</button>
-  </div>
-</div>
 
 <!-- ════════════════════════════════════
      MOTOR CONTROL CONFIG
@@ -680,10 +569,6 @@
       <input type="password" id="cfg-pass" placeholder="••••••••">
     </div>
   </div>
-  <div class="input-group" style="margin-bottom:18px">
-    <label>Topic Publish LCD</label>
-    <input type="text" id="cfg-topic" value="esp32/lcd/message">
-  </div>
   <div class="btn-row">
     <button class="btn-connect" id="connect-btn" onclick="toggleConnect()">⚡ HUBUNGKAN</button>
   </div>
@@ -773,64 +658,6 @@ function getActionConfig(actionId) {
 let client      = null;
 let isConnected = false;
 
-// ══════════════════════════════════════════════════════
-//  LCD Render
-// ══════════════════════════════════════════════════════
-const COLS = 16;
-function buildLcd() {
-  ['row1','row2'].forEach(id => {
-    const row = document.getElementById(id);
-    row.innerHTML = '';
-    for (let i = 0; i < COLS; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'lcd-cell empty';
-      cell.id = id + '-' + i;
-      cell.textContent = ' ';
-      row.appendChild(cell);
-    }
-  });
-}
-
-function updateLcd(text) {
-  const padded = (text + ' '.repeat(32)).substring(0, 32);
-  const line1 = padded.substring(0, 16);
-  const line2 = padded.substring(16, 32);
-  const origLen = text.length;
-
-  [line1, line2].forEach((line, rowIdx) => {
-    const rowId = rowIdx === 0 ? 'row1' : 'row2';
-    for (let i = 0; i < 16; i++) {
-      const cell = document.getElementById(rowId + '-' + i);
-      const globalIdx = rowIdx * 16 + i;
-      const ch = line[i];
-      const isBlank = globalIdx >= origLen;
-      const isOver  = globalIdx >= 32 && globalIdx < origLen;
-      if (isOver) {
-        cell.className = 'lcd-cell overflow';
-        cell.textContent = ch || ' ';
-      } else if (isBlank) {
-        cell.className = 'lcd-cell empty';
-        cell.textContent = ' ';
-      } else {
-        cell.className = 'lcd-cell';
-        cell.textContent = ch === ' ' ? '\u00a0' : ch;
-      }
-    }
-  });
-
-  const counter = document.getElementById('char-count');
-  counter.textContent = Math.min(origLen, 32);
-  counter.className = 'count' + (origLen > 32 ? ' over' : origLen > 24 ? ' warn' : '');
-}
-
-document.getElementById('msg-input').addEventListener('input', function() {
-  if (this.value.length > 32) this.value = this.value.substring(0, 32);
-  updateLcd(this.value);
-});
-document.getElementById('clear-btn').addEventListener('click', () => {
-  document.getElementById('msg-input').value = '';
-  updateLcd('');
-});
 
 // ══════════════════════════════════════════════════════
 //  Log & Status
@@ -891,7 +718,6 @@ function connect() {
     isConnected = true;
     setStatus('connected', 'Terhubung ke broker');
     log('✓ Terhubung ke ' + host, 'ok');
-    document.getElementById('send-btn').disabled = false;
     setMotorBtnsDisabled(false);
     const btn = document.getElementById('connect-btn');
     btn.textContent = '✕ PUTUSKAN';
@@ -901,7 +727,6 @@ function connect() {
   client.on('error', (err) => {
     setStatus('error', 'Error koneksi');
     log('Error: ' + (err.message || err), 'err');
-    document.getElementById('send-btn').disabled = true;
     setMotorBtnsDisabled(true);
   });
 
@@ -910,7 +735,6 @@ function connect() {
       isConnected = false;
       setStatus('', 'Koneksi terputus');
       log('Koneksi ditutup.', 'warn');
-      document.getElementById('send-btn').disabled = true;
       setMotorBtnsDisabled(true);
       const btn = document.getElementById('connect-btn');
       btn.textContent = '⚡ HUBUNGKAN';
@@ -928,7 +752,6 @@ function disconnect() {
     client = null;
     isConnected = false;
     setStatus('', 'Terputus');
-    document.getElementById('send-btn').disabled = true;
     setMotorBtnsDisabled(true);
     const btn = document.getElementById('connect-btn');
     btn.textContent = '⚡ HUBUNGKAN';
@@ -938,27 +761,6 @@ function disconnect() {
   }
 }
 
-// ══════════════════════════════════════════════════════
-//  Send LCD message
-// ══════════════════════════════════════════════════════
-document.getElementById('send-btn').addEventListener('click', () => {
-  if (!isConnected || !client) { log('Belum terhubung ke broker.', 'err'); return; }
-  const rawText = document.getElementById('msg-input').value;
-  const text  = rawText.substring(0, 32);
-  const line1 = text.substring(0, 16).padEnd(16, ' ');
-  const line2 = text.substring(16, 32).padEnd(16, ' ');
-  const topic = document.getElementById('cfg-topic').value.trim();
-  const payload = JSON.stringify({ line1: line1.trimEnd(), line2: line2.trimEnd() });
-
-  client.publish(topic, payload, { qos: 1 }, (err) => {
-    if (err) { log('Gagal kirim: ' + err.message, 'err'); }
-    else {
-      log(`✓ Pesan terkirim → ${topic}`, 'ok');
-      log(`  Payload: ${payload}`, 'info');
-      flashScreen();
-    }
-  });
-});
 
 // ══════════════════════════════════════════════════════
 //  Motor publish — sends one payload per repetition
@@ -1004,15 +806,8 @@ document.querySelectorAll('.motor-btn[data-action]').forEach(btn => {
   });
 });
 
-function flashScreen() {
-  const f = document.getElementById('flash');
-  f.classList.add('active');
-  setTimeout(() => f.classList.remove('active'), 150);
-}
 
 // ── Init ──
-buildLcd();
-updateLcd('');
 buildConfigGrid();
 setMotorBtnsDisabled(true);
 </script>
